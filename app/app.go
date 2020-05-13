@@ -87,10 +87,10 @@ func Run() {
 	r = gin.Default()
 
 	// Server static files
-	r.Static("/assets", "./assets")
+	r.Static("/static", "./static")
 
 	// Load all templates
-	r.LoadHTMLGlob("templates/*")
+	r.LoadHTMLGlob("./templates/*")
 
 	// Register all routes
 	initRoutes()
