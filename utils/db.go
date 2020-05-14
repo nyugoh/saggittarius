@@ -9,6 +9,7 @@ import (
 	"github.com/jamf/go-mysqldump"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	"github.com/nyugoh/sagittarius/app/models"
 	"os"
 	"strconv"
 	"strings"
@@ -110,7 +111,7 @@ func AutoMigrateDB(db *gorm.DB) {
 	Log("Running auto migrations...")
 	db.LogMode(true)
 	db.SingularTable(true)
-	db.AutoMigrate()
+	db.AutoMigrate(&models.Client{})
 	Log("Done migrating...")
 }
 

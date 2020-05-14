@@ -17,5 +17,5 @@ type App struct {
 }
 
 func (app *App) Index(c *gin.Context) {
-	c.HTML(http.StatusOK, "index.html", gin.H{"title": "Sagittarius"})
+	c.HTML(http.StatusOK, "index.html", gin.H{"title": "Dashboard"})
 }

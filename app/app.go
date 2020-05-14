@@ -126,4 +126,11 @@ func initRoutes() {
 
 	r.GET("/", app.Index)
 
+	clientsRouter := r.Group("/clients")
+	{
+		clientsRouter.GET("/", app.Clients)
+		clientsRouter.GET("/list", app.ListClients)
+		clientsRouter.POST("/add", app.AddClient)
+	}
+
 }
