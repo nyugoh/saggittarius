@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/contrib/sessions"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	uuid2 "github.com/google/uuid"
+	"github.com/nyugoh/sagittarius/app/models"
 	"log"
 	"net/http"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -51,20 +51,35 @@ func ValidateEmail(email string) (bool, error) {
 	return true, nil
 }
 
+func VerifyToken(tokenString string) (*jwt.Token, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &models.CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("SESSION_KEY")), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return token, nil
+}
+
+
 func AuthRequired() gin.HandlerFunc  {
 	return func(c *gin.Context) {
 		Log("Hit an auth required endpoint...")
-		session := sessions.Default(c)
-		userId := session.Get("userId")
-		username := session.Get("username")
-		if username == nil || userId == nil {
-			//c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-			c.Redirect(302, "/auth/login")
+		auth := c.Request.Header.Get("Authorization")
+		if len(auth)== 0 {
+			SendError(c, "Authorization token is required.")
 			return
 		}
-		Log("Request made by user Id:", userId, "Username:", username)
-		c.Set("userId", userId)
-		c.Set("username", username)
+		token, err := VerifyToken(auth)
+		if err != nil {
+			SendError(c, err.Error())
+			return
+		}
+
+		claims := token.Claims.(*models.CustomClaims)
+		Log(claims.AppName)
+		Log("Request made by app name:", claims.AppName)
+		c.Set("app_name", claims.AppName)
 		c.Next()
 	}
 }
@@ -84,18 +99,13 @@ func MetricsMonitor() gin.HandlerFunc {
 	}
 }
 
-func ExtractUser(c *gin.Context) (username string, userId int)  {
-	if name, ok := c.Get("username"); ok {
-		username = fmt.Sprintf("%v", name)
+func ExtractAppName(c *gin.Context) (appName string)  {
+	if name, ok := c.Get("app_name"); ok {
+		appName = fmt.Sprintf("%v", name)
 	} else {
-		username = "Unknown"
+		appName = "Unknown"
 	}
 
-	if id, ok := c.Get("userId"); ok {
-		userId, _ = strconv.Atoi(fmt.Sprintf("%v", id))
-	} else {
-		userId = 0
-	}
 	return
 }
 

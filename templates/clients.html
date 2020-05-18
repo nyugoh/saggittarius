@@ -50,8 +50,8 @@
         $("#clients-dt").append(`
         <tr>
             <td>${client.ID}</td>
-            <td>${client.appName}</td>
-            <td>${client.ipAddress}: ${client.port}</td>
+            <td><a href="/clients/app/${client.ID}">${client.appName}</a></td>
+            <td><span class="badge badge-primary">${client.ipAddress}</span> : <span class="badge badge-primary">${client.port}</span></td>
             <td class="text-center">
             ${client.status? '<span class="text-primary">Online</span>': '<span class="text-danger">Offline</span>'}
             </td>

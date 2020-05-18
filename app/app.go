@@ -131,6 +131,11 @@ func initRoutes() {
 		clientsRouter.GET("/", app.Clients)
 		clientsRouter.GET("/list", app.ListClients)
 		clientsRouter.POST("/add", app.AddClient)
+		clientsRouter.POST("/auth", app.GenerateJWT)
+		clientsRouter.GET("/folders", utils.AuthRequired(),  app.GetFolders)
+
+		clientsRouter.GET("/app/:id", app.ListFolders)
+		clientsRouter.GET("/read", app.ReadLog)
 	}
 
 }

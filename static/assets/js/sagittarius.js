@@ -80,3 +80,8 @@ async function loadClients() {
     let result = await getJson("/clients/list");
     return result.payload;
 }
+
+async function readLog(path) {
+    let results = await getJson("/clients/read?log=" + path);
+    return results.payload;
+}
