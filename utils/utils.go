@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -99,7 +100,7 @@ func MetricsMonitor() gin.HandlerFunc {
 	}
 }
 
-func ExtractAppName(c *gin.Context) (appName string)  {
+func ExtractAppName(c *gin.Context) (appName string) {
 	if name, ok := c.Get("app_name"); ok {
 		appName = fmt.Sprintf("%v", name)
 	} else {
@@ -107,6 +108,27 @@ func ExtractAppName(c *gin.Context) (appName string)  {
 	}
 
 	return
+}
+
+func SendGet(url string) (result map[string]interface{}, err error) {
+	client := http.Client{}
+	request, err := http.NewRequest(http.MethodGet, url, bytes.NewBuffer([]byte("")))
+
+	res, err := client.Do(request)
+	if err != nil {
+		return nil, err
+	}
+
+	json.NewDecoder(res.Body).Decode(&result)
+
+	Log(result)
+	if res.StatusCode == 200 {
+		return result, nil
+	} else {
+		errMsg := fmt.Sprintf("%s", result["error"])
+		LogError(errMsg)
+		return nil, errors.New(errMsg)
+	}
 }
 
 func ExitApp(code int) {
