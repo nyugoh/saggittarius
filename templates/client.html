@@ -81,6 +81,7 @@
     }
 
     async function readFile(path) {
+        path = `http://${client.ipAddress}:${client.port}/read?log=${path}`;
         let log = await readLog(path);
         if (log){
             log = log.replace(/\n/g, "<br/>");

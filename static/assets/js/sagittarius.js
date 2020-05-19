@@ -22,6 +22,9 @@ async function sendJson(url, payload) {
 
 
 async function getJson(url) {
+    if(url.toString().indexOf("http") !== -1) {
+
+    }
     let response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -82,6 +85,6 @@ async function loadClients() {
 }
 
 async function readLog(path) {
-    let results = await getJson("/clients/read?log=" + path);
+    let results = await getJson(path);
     return results.payload;
 }
