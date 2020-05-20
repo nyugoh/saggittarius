@@ -107,3 +107,55 @@ func (app *App) ListFolders(c *gin.Context) {
 	})
 }
 
+func (app *App) DeleteClient(c *gin.Context) {
+	clientId := c.Param("id")
+	client := models.Client{}
+	if err := app.DB.Find(&client, "id=?", clientId).Error; err != nil {
+		utils.SendError(c, err.Error())
+		return
+	}
+
+	utils.Log("Deleting a client:", client.AppName)
+	app.DB.Delete(&client)
+
+	utils.SendJson(c, gin.H{
+		"success": "success",
+		"message": "client deleted successfully",
+	})
+}
+
+func (app *App) EditClient(c *gin.Context) {
+	payload := struct {
+		AppId    string `json:"appId" `
+		AppName    string `json:"appName" `
+		IPAddress  string `json:"appIp"`
+		Port       string `json:"appPort"`
+		Folders    string `json:"folders"`
+		ConfigPath string `json:"configPath"`
+	}{}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		utils.SendError(c, err.Error())
+		return
+	}
+
+	clientId := c.Param("id")
+	client := models.Client{}
+	if err := app.DB.Find(&client, "id=?", clientId).Error; err != nil {
+		utils.SendError(c, err.Error())
+		return
+	}
+
+	utils.Log("Updating a client:", payload.AppName)
+	client.AppName = payload.AppName
+	client.IPAddress = payload.IPAddress
+	client.Port = payload.Port
+	client.Folders = payload.Folders
+	client.ConfigPath = payload.ConfigPath
+	app.DB.Save(&client)
+
+	utils.SendJson(c, gin.H{
+		"success": "success",
+		"message": "client updated successfully",
+		"client": client,
+	})
+}

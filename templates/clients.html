@@ -28,10 +28,11 @@
                     <thead>
                     <tr>
                         <th>#</th>
+{{/*                        <th>Created At</th>*/}}
                         <th>App Name</th>
+                        <th>Folders</th>
                         <th>IP & Port</th>
-                        <th class="text-center">Status</th>
-                        <th class="text-center">Actions</th>
+                        <th>Actions</th>
                     </tr>
                     </thead>
                     <tbody id="clients-dt"></tbody>
@@ -46,42 +47,103 @@
     let clients = [];
 
     function addClientRow(client) {
-        if(!client) return;
+        if (!client) return;
+        let folders = "";
+        client.folders.toString().split(",").forEach(folder => {
+            folders += `<p>${folder}</p>`
+        });
         $("#clients-dt").append(`
         <tr>
             <td>${client.ID}</td>
-            <td><a href="/clients/app/${client.ID}">${client.appName}</a></td>
-            <td><span class="badge badge-primary">${client.ipAddress}</span> : <span class="badge badge-primary">${client.port}</span></td>
-            <td class="text-center">
-            ${client.status? '<span class="text-primary">Online</span>': '<span class="text-danger">Offline</span>'}
+            // <td>${moment(client.CreatedAt).format("lll")}</td>
+            <td>${client.appName}</td>
+            <td>
+                ${folders}
             </td>
-            <td class="text-center">
-                <ul class="table-controls">
-                    <li><a href="javascript:void(0);" data-toggle="tooltip" data-placement="top"
-                           title="Edit">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                 stroke-linecap="round" stroke-linejoin="round"
-                                 class="feather feather-edit-2 text-success">
-                                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
-                            </svg>
-                        </a></li>
-                    <li><a href="javascript:void(0);" data-toggle="tooltip" data-placement="top"
-                           title="Delete">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                 stroke-linecap="round" stroke-linejoin="round"
-                                 class="feather feather-trash-2 text-danger">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                <line x1="10" y1="11" x2="10" y2="17"></line>
-                                <line x1="14" y1="11" x2="14" y2="17"></line>
-                            </svg>
-                        </a></li>
-                </ul>
+            <td><span class="badge badge-primary">${client.ipAddress}</span> : <span class="badge badge-primary">${client.port}</span></td>
+            <td>
+                <a href="javascript:openClient(${client.ID});">
+                    <span class="material-icons md-light md-18 text-primary">visibility</span>
+                </a>
+                <a href="javascript:editClient(${client.ID});">
+                    <span class="material-icons md-light md-18 text-info">create</span>
+                </a>
+                <a href="javascript:deleteClient(${client.ID});">
+                    <span class="material-icons md-light md-18 text-danger">delete_outline</span>
+                </a>
             </td>
         </tr>
         `);
+    }
+
+    function openClient(client) {
+        window.location = "/clients/app/" + client;
+    }
+
+    function editClient(clientId) {
+        let modal = $("#edit-client-modal");
+        let client = clients.filter(client => client.ID === clientId)[0];
+        console.log(client);
+        modal.find("#edit-app-id").val(clientId);
+        modal.find("#edit-app-name").val(client.appName);
+        modal.find("#edit-app-ip").val(client.ipAddress);
+        modal.find("#edit-app-port").val(client.port);
+        modal.find("#edit-folders").val(client.folders);
+        modal.find("#edit-app-config-path").val(client.configPath);
+        modal.modal("show");
+    }
+
+    async function saveClient() {
+        let modal = $("#edit-client-modal");
+        let appId = modal.find("#edit-app-id").val();
+        let appName = modal.find("#edit-app-name").val();
+        let appIp = modal.find("#edit-app-ip").val();
+        let appPort = modal.find("#edit-app-port").val();
+        let folders = modal.find("#edit-folders").val();
+        let configPath = modal.find("#edit-app-config-path").val();
+
+        if (!appName) {
+            showError("App name is required");
+            return;
+        }
+        if (!appIp || !appPort) {
+            showError("App IP address & port is required");
+            return;
+        }
+        let result = await sendJson("/clients/edit/" + appId, {appId, appName, appIp, appPort, folders, configPath});
+        if (result) {
+            await reloadClients();
+            alertify.success("Client edited successfully.");
+            $("#edit-client-modal").modal("hide");
+        } else {
+            showError(result.error);
+        }
+    }
+
+    async function deleteClient(clientId) {
+        if (!clientId) {
+            showError("Unknown ID");
+            return;
+        }
+        alertify.defaults.glossary = {
+            title: 'Confirm',
+            ok: 'Delete',
+            cancel: 'Cancel'
+        };
+        alertify.confirm("Do you want to delete this client?",
+            async function () {
+                let result = await getJson("/clients/delete/" + clientId);
+                if (result) {
+                    alertSuccess("Client deleted successfully");
+                    await reloadClients();
+                } else {
+                    alertError("Error deleting client");
+                }
+            },
+            function () {
+                alertify.error('Action canceled');
+            }
+        );
     }
 
     async function addClient() {
@@ -101,7 +163,6 @@
             return;
         }
         let result = await sendJson("/clients/add", {appName, appIp, appPort, folders, configPath});
-        console.log(result);
         if (result) {
             addClientRow(result.payload);
             alertify.success("Client added successfully.");
@@ -154,10 +215,8 @@
                 </div>
                 <div class="form-group mb-4">
                     <label for="folders">Folders to monitor <span class="text-info">(separated by commas)</span></label>
-                    <textarea class="form-control" id="folders" rows="5">
-/var/www/mo-consumer/logs,
-/var/www/kiboko/logs,
-/go-apps/lucky-number/api/logs,
+                    <textarea class="form-control" id="folders" rows="5"
+                              placeholder="/var/www/mo-consumer/logs,/var/www/kiboko/logs,/go-apps/lucky-number/api/logs,">
                     </textarea>
                 </div>
                 <div class="form-group mb-4">
@@ -167,8 +226,60 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn" data-dismiss="modal"><i class="flaticon-cancel-12"></i> Discard</button>
-                <button type="button" onclick="addClient()" class="btn btn-primary">Add</button>
+                <button class="btn" data-dismiss="modal"><i class="flaticon-cancel-12"></i> Close</button>
+                <button type="button" onclick="addClient()" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="edit-client-modal" tabindex="-1" role="dialog" aria-labelledby="edit-client-modalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="add-client-modalLabel">Edit Client</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                         stroke-linejoin="round" class="feather feather-x">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group mb-4">
+                    <label for="edit-app-name">App Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="edit-app-name" placeholder="MO Consumer">
+                    <input type="hidden" id="edit-app-id">
+                </div>
+                <div class="form-group mb-4">
+                    <label for="edit-app-ip">IP Address & Port Number <span class="text-danger">*</span></label>
+                    <div class="row">
+                        <div class="col-8">
+                            <input type="text" class="form-control" id="edit-app-ip" placeholder="10.45.68.50">
+                        </div>
+                        <div class="col-4">
+                            <input type="text" class="form-control" id="edit-app-port" placeholder="5000">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group mb-4">
+                    <label for="edit-folders">Folders to monitor <span
+                                class="text-info">(separated by commas)</span></label>
+                    <textarea class="form-control" id="edit-folders" rows="5">
+                    </textarea>
+                </div>
+                <div class="form-group mb-4">
+                    <label for="edit-app-config-path">Config file path</label>
+                    <input type="text" class="form-control" id="edit-app-config-path"
+                           placeholder="/go-apps/lucky-numbers/.env">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" data-dismiss="modal"><i class="flaticon-cancel-12"></i> Close</button>
+                <button type="button" onclick="saveClient()" class="btn btn-primary">Edit</button>
             </div>
         </div>
     </div>

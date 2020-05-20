@@ -135,6 +135,8 @@ func initRoutes() {
 		clientsRouter.GET("/folders", utils.AuthRequired(),  app.GetFolders)
 
 		clientsRouter.GET("/app/:id", app.ListFolders)
+		clientsRouter.GET("/delete/:id", app.DeleteClient)
+		clientsRouter.POST("/edit/:id", app.EditClient)
 	}
 
 }
